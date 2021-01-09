@@ -1,0 +1,10 @@
+1) add tif files to data/tif
+2) run
+python tif-to-xyz.py
+3) add xyz files to data/xyz
+4) run
+python xyz_to_xyz_low_res.py
+5) run
+python xyz_low_res_to_xyz_filled_in.py
+6) run
+python xyz_filled_in_to_obj.py
