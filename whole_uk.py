@@ -24,7 +24,7 @@ def get_closest(x, sorted_xs):
             closest = test_x
 
 def get_all_within_threshold(x, sorted_xs, thresh):
-    return filter(lambda val: 0 < x-val < thresh, sorted_xs)
+    return filter(lambda val: -thresh < x-val < 0, sorted_xs)
 
 
 class UkLandmass:
@@ -101,7 +101,7 @@ class UkLandmass:
 
         return included
 
-    def filter_included_all_y(self, sorted_xs, y, y_threshold):
+    def filter_included_all_y(self, sorted_xs, y, y_threshold, x_threshold):
         included = set()
         for close_y in get_all_within_threshold(y, self.possible_ys, y_threshold):
             blocks = self.y_to_blocks[close_y]
@@ -109,7 +109,7 @@ class UkLandmass:
             in_block = False
             next_checkpoint = blocks[cur_block_index][0]
             for x in sorted_xs:
-                while x >= next_checkpoint:
+                while x >= next_checkpoint + (-x_threshold if not in_block else 0):
                     if in_block:
                         cur_block_index += 1
                         if len(blocks) <= cur_block_index:
@@ -126,16 +126,16 @@ class UkLandmass:
                     included.add(x)
         return included
 
-    def plot_template(self):
-        df_dict_landmass = {'Z': [], 'geometry': []}
-        next_bound_y = get_next_bounds(self.possible_ys)
-        for y in self.possible_ys:
-            for x0, x1 in self.y_to_blocks[y]:
-                df_dict_landmass['Z'].append(0)
-                df_dict_landmass['geometry'].append(Polygon(get_rect_verts(x0, x1, y, next_bound_y[y])))
-        df_uk = pd.DataFrame.from_dict(df_dict_landmass)
-        plot_uk(df_uk)
-        plt.show()
+    # def plot_template(self):
+    #     df_dict_landmass = {'Z': [], 'geometry': []}
+    #     next_bound_y = get_next_bounds(self.possible_ys)
+    #     for y in self.possible_ys:
+    #         for x0, x1 in self.y_to_blocks[y]:
+    #             df_dict_landmass['Z'].append(0)
+    #             df_dict_landmass['geometry'].append(Polygon(get_rect_verts(x0, x1, y, next_bound_y[y])))
+    #     df_uk = pd.DataFrame.from_dict(df_dict_landmass)
+    #     plot_uk(df_uk)
+    #     plt.show()
 
 
 

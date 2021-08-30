@@ -6,7 +6,7 @@ from shapely.geometry import Polygon
 from tqdm import tqdm
 
 from helpers import get_next_bounds, get_rect_verts, scale_z, verts_for_cuboid, scale_to_texture, \
-    FORCE_OVERWRITE, FILE_LOCATIONS, FileType
+    FORCE_OVERWRITE, FILE_LOCATIONS, FileType, getFilepaths, log
 
 Z_SCALE = 10
 MATERIAL_NAME = 'viridis'
@@ -41,9 +41,10 @@ def dataframe_to_obj(df, filename='uk.obj', material_fname='master.mtl', materia
         fp.write('mtllib {}\n'.format(material_fname))
         fp.write('# Verts\n')
         for x, y, z in tqdm(all_verts):
-            fp.write(vert_format.format(x, y, z))
-        for col in tqdm(all_textures):
-            fp.write(texture_format.format(col, col))
+            fp.write(vert_format.format(round(x,4), round(y,4), round(z,5)))
+        # don't need this next bit as we build the textures in the browser as it is faster.
+        # for col in tqdm(all_textures):
+        #     fp.write(texture_format.format(col, col))
         fp.write('# Faces\n')
         fp.write('usemtl {}\n'.format(material_name))
         for j, (a, b, c, d) in tqdm(enumerate(all_faces)):
@@ -51,25 +52,18 @@ def dataframe_to_obj(df, filename='uk.obj', material_fname='master.mtl', materia
             fp.write(face_format.format(a, i, b, i, c, i, d, i))
 
 
-print(os.path.basename(__file__))
+def processEntityFilledInToObj(name, forceOverwrite=False):
+    filepath_in, filepath_out = getFilepaths(name, FileType.XYZ_FILLED_IN, FileType.OBJ,forceOverwrite)
 
-for filename in os.listdir(FILE_LOCATIONS[FileType.XYZ_FILLED_IN]):
-
-    filepath_in = os.path.join(FILE_LOCATIONS[FileType.XYZ_FILLED_IN], filename)
-    filepath_out = os.path.join(FILE_LOCATIONS[FileType.OBJ], os.path.splitext(filename)[0] + '.obj')
-
-    if os.path.exists(filepath_out) and not FORCE_OVERWRITE:
-        continue
-
-    print("Processing {}".format(filepath_in))
+    log("Processing {}".format(filepath_in))
     df = pd.read_csv(filepath_in)
-    print("Shape {}".format(df.shape))
+    log("Shape {}".format(df.shape))
     xs = np.sort(df['X'].unique())
     ys = np.sort(df['Y'].unique())
 
     next_bound_x = get_next_bounds(xs)
     next_bound_y = get_next_bounds(ys)
-    print('Setting geometry column')
+    log('Setting geometry column')
     if WITH_NAIVE_Y_SCALE:
         df['geometry'] = [Polygon(get_rect_verts(row['X'], next_bound_x[row['X']], row['Y'] * UK_HEIGHT / UK_WIDTH,
                                                  next_bound_y[row['Y']] * UK_HEIGHT / UK_WIDTH))
@@ -78,6 +72,18 @@ for filename in os.listdir(FILE_LOCATIONS[FileType.XYZ_FILLED_IN]):
         df['geometry'] = [Polygon(get_rect_verts(row['X'], next_bound_x[row['X']], row['Y'], next_bound_y[row['Y']]))
                           for i, row in tqdm(df.iterrows())]
 
-    print('Dataframe to obj')
+    log('Dataframe to obj')
     dataframe_to_obj(scale_z(df, Z_SCALE), filepath_out, material_name=MATERIAL_NAME)
-    print("*" * 30)
+
+
+if __name__ == '__main__':
+    log(os.path.basename(__file__))
+
+    for filename in os.listdir(FILE_LOCATIONS[FileType.XYZ_FILLED_IN]):
+        entityName = os.path.splitext(filename)[0]
+        filepath_out = os.path.join(FILE_LOCATIONS[FileType.OBJ], entityName + '.obj')
+
+        if os.path.exists(filepath_out) and not FORCE_OVERWRITE:
+            continue
+
+        processEntityFilledInToObj(entityName, FORCE_OVERWRITE)

@@ -1,8 +1,36 @@
 import math
+import os
+
+from termcolor import colored
 from enum import Enum
-# This isn't working right now - seems to be some issue with fiona will solve in the future since currently only used to plot the heat maps.
-# import fiona
-# import geopandas as gpd
+
+
+def noOverwriteOpen(filepath):
+    if not os.path.isfile(filepath):
+        return open(filepath, 'w+')
+    raise Exception('File Already exists: {}'.format(filepath))
+
+
+class LogLevel(Enum):
+    INFO = 0,
+    WARN = 1,
+    ERROR = 2,
+
+
+def log(str, level=LogLevel.INFO):
+    color = 'green' if level == LogLevel.INFO else ('yellow' if level == LogLevel.WARN else 'red')
+    print(colored(str, color))
+
+def logInfo(val, *args):
+    if args:
+        val = (val,) + args
+    log(val, LogLevel.INFO)
+
+if __name__ == '__main__':
+    log('info auto')
+    log('info explicit', LogLevel.INFO)
+    log('warn', LogLevel.WARN)
+    log('error', LogLevel.ERROR)
 
 FORCE_OVERWRITE = False
 
@@ -13,8 +41,29 @@ class FileType(Enum):
     XYZ_LOW_RES = 3,
     XYZ_FILLED_IN = 4,
     OBJ = 5,
-    VID = 6
+    VID = 6,
+    POINT = 7,
+    ZIP = 8,
+    HEATMAP = 9,
+    COMPRESSED = 10,
+    MASKS = 11,
+    POSTCODE = 12,
 
+
+FILE_EXTENSIONS = {
+    FileType.TIF: ".tif",
+    FileType.XYZ: '.csv',
+    FileType.XYZ_LOW_RES: ".csv",
+    FileType.XYZ_FILLED_IN: ".csv",
+    FileType.OBJ: '.obj',
+    FileType.VID: '.mp4',
+    FileType.POINT: '.json',
+    FileType.COMPRESSED: '.obj.gz',
+    FileType.HEATMAP: '.png',
+    FileType.MASKS: '.csv',
+    FileType.POSTCODE: '.csv'
+}
+BASE_FILEPATH = '/Users/james_hargreaves/PycharmProjects/dataplay_a2'
 
 FILE_LOCATIONS = {
     FileType.TIF: "data/tifs",
@@ -22,14 +71,24 @@ FILE_LOCATIONS = {
     FileType.XYZ_LOW_RES: "data/xyz_low_res",
     FileType.XYZ_FILLED_IN: "data/xyz_fill_in",
     FileType.OBJ: 'data/obj/',
-    FileType.VID: 'data/vid/'
+    FileType.VID: 'data/vid/',
+    FileType.POINT: 'data/points/',
+    FileType.COMPRESSED: 'data/compressed/',
+    FileType.HEATMAP: 'data/heatmaps/',
+    FileType.MASKS: 'data/masks/',
+    FileType.POSTCODE: 'data/postcode/'
 }
 
 
-# def plot_uk(df):
-#     pds_poly = gpd.GeoDataFrame(df)
-#     pds_poly = pds_poly.set_crs('EPSG:4326')
-#     pds_poly.plot(column='Z', legend=True)
+def getFilepaths(entityName: str, inputType: type(FileType), outputType: type(FileType),
+                 forceOverwrite: bool = True) -> (str, str):
+    filepath_in = os.path.join(FILE_LOCATIONS[inputType], entityName + FILE_EXTENSIONS[inputType])
+    filepath_out = os.path.join(FILE_LOCATIONS[outputType], entityName + FILE_EXTENSIONS[outputType])
+    if not os.path.exists(filepath_in):
+        raise Exception('input file doesnt exist for entity {} ({})'.format(entityName, filepath_in))
+    if os.path.exists(filepath_out) and not forceOverwrite:
+        raise Exception('Output file already exists for entity ' + entityName)
+    return filepath_in, filepath_out
 
 
 def get_rect_verts(x1, x2, y1, y2):
@@ -37,13 +96,15 @@ def get_rect_verts(x1, x2, y1, y2):
 
 
 def get_next_bounds(xs):
+    if len(xs) < 1:
+        raise Exception('To short array: [{}]'.format(','.join(xs)))
     differences = [xs[i] - xs[i - 1] for i in range(1, len(xs))]
     av_difference = sum(differences) / len(differences)
     next_bound = {}
     for i, x in enumerate(xs):
         limit = xs[i + 1] if i < len(xs) - 1 else 2 * x - xs[i - 1]
         # to handle the case where we have a big gap between points
-        if limit - x > av_difference * 3:
+        if limit - x > av_difference * 10:  # changed from 3 to 10 if things look weird lets undo this
             limit = x + av_difference
         next_bound[x] = limit
     return next_bound
