@@ -3,15 +3,19 @@ import math
 import os
 from time import time
 
+from MSOA_common_to_geoDF import processMSOAEntityCommonToGeoDF
+from MSOA_geoDF_to_merged import ProcessMSOAEntityGeoDfToMerged
+from MSOA_merged_to_simplified import processMSOAEntityMergedToSimplified
 from helpers import log
 from obj_to_zip import processEntityObjToZip
 from points_to_distance_xyz import processEntityPointToDistance
-from postcodeToAverageXyz import processPostcodeToMedianXYZLowRes
-from produce_heatmap import processEntityXYZToHeatMap
+from postcodeToAverageXyz import processPostcodeToMedianXYZLowRes, processPostcodeToMeanXYZLowRes
+from produce_heatmap import processEntityXYZToHeatMap, processMSOAEntityToHeatMap
 from skip_filling_in import skipLowResToFilledIn
-from xyz_filled_in_to_obj import processEntityFilledInToObj
+from xyz_filled_in_to_obj import processEntityFilledInToObj, processMSOASimplifiedEntityInToObj
 from xyz_low_res_to_xyz_filled_in import processEntityLowResToFilledIn, processEntityLowResToFilledInEnglandAndWales
-from xyz_to_xyz_low_res import processEntityXyzToXyzLowRes
+from xyz_to_xyz_low_res import processEntityXyzToXyzLowRes, processEntityXyzToXyzLowResWithResolution, \
+    processEntityXyzToXyzLowResEngWales
 
 POINTS_ALL_STEPS = [processEntityPointToDistance, processEntityXyzToXyzLowRes, processEntityLowResToFilledIn,
                     processEntityFilledInToObj, processEntityXYZToHeatMap,
@@ -50,109 +54,35 @@ class PredLoadTimes:
         else:
             return math.nan, math.nan
 
-
+FULL_MSOA = [processEntityObjToZip]
 entityStepsToRun = {
-    'med_price_paid_18-20': [processPostcodeToMedianXYZLowRes, processEntityLowResToFilledInEnglandAndWales,
-                         processEntityFilledInToObj, processEntityXYZToHeatMap,
-                         processEntityObjToZip],
-    'med_price_paid_15-17': [processPostcodeToMedianXYZLowRes, processEntityLowResToFilledInEnglandAndWales,
-                         processEntityFilledInToObj, processEntityXYZToHeatMap,
-                         processEntityObjToZip],
-    'med_price_paid_12-14': [processPostcodeToMedianXYZLowRes, processEntityLowResToFilledInEnglandAndWales,
-                         processEntityFilledInToObj, processEntityXYZToHeatMap,
-                         processEntityObjToZip],
-    'med_price_paid_09-11': [processPostcodeToMedianXYZLowRes, processEntityLowResToFilledInEnglandAndWales,
-                         processEntityFilledInToObj, processEntityXYZToHeatMap,
-                         processEntityObjToZip],
-    'med_price_paid_06-08': [processPostcodeToMedianXYZLowRes, processEntityLowResToFilledInEnglandAndWales,
-                         processEntityFilledInToObj, processEntityXYZToHeatMap,
-                         processEntityObjToZip],
-    'med_price_paid_03-05': [processPostcodeToMedianXYZLowRes, processEntityLowResToFilledInEnglandAndWales,
-                         processEntityFilledInToObj, processEntityXYZToHeatMap,
-                         processEntityObjToZip],
-    'med_price_paid_00-02': [processPostcodeToMedianXYZLowRes, processEntityLowResToFilledInEnglandAndWales,
-                         processEntityFilledInToObj, processEntityXYZToHeatMap,
-                         processEntityObjToZip],
-    'med_price_paid_97-99': [processPostcodeToMedianXYZLowRes, processEntityLowResToFilledInEnglandAndWales,
-                         processEntityFilledInToObj, processEntityXYZToHeatMap,
-                         processEntityObjToZip],
+    # 'FY2016NetIncomeBeforeHousing': FULL_MSOA,
+    # 'FY2016NetIncomeAfterHousing': FULL_MSOA,
+    # 'FY2016NetAnnualIncome': FULL_MSOA,
+    # 'FY2016TotalIncome': FULL_MSOA,
+    # 'FY2018NetIncomeBeforeHousing': FULL_MSOA,
+    # 'FY2018NetIncomeAfterHousing': FULL_MSOA,
+    # 'FY2018NetAnnualIncome': FULL_MSOA,
+    # 'FY2018TotalIncome': FULL_MSOA,
+    'med_price_paid_97-99': [processEntityLowResToFilledInEnglandAndWales, processEntityFilledInToObj, processEntityXYZToHeatMap, processEntityObjToZip],
+    'med_price_paid_00-02': [processEntityLowResToFilledInEnglandAndWales, processEntityFilledInToObj, processEntityXYZToHeatMap, processEntityObjToZip],
+    'med_price_paid_03-05': [processEntityLowResToFilledInEnglandAndWales, processEntityFilledInToObj, processEntityXYZToHeatMap, processEntityObjToZip],
+    'med_price_paid_06-08': [processEntityLowResToFilledInEnglandAndWales, processEntityFilledInToObj, processEntityXYZToHeatMap, processEntityObjToZip],
+    'med_price_paid_09-11': [processEntityLowResToFilledInEnglandAndWales, processEntityFilledInToObj, processEntityXYZToHeatMap, processEntityObjToZip],
+    'med_price_paid_12-14': [processEntityLowResToFilledInEnglandAndWales, processEntityFilledInToObj, processEntityXYZToHeatMap, processEntityObjToZip],
+    'med_price_paid_15-17': [processEntityLowResToFilledInEnglandAndWales, processEntityFilledInToObj, processEntityXYZToHeatMap, processEntityObjToZip],
+    'med_price_paid_18-20': [processEntityLowResToFilledInEnglandAndWales, processEntityFilledInToObj, processEntityXYZToHeatMap, processEntityObjToZip],
+
+    'mean_price_paid_97-99': [processEntityLowResToFilledInEnglandAndWales, processEntityFilledInToObj, processEntityXYZToHeatMap, processEntityObjToZip],
+    'mean_price_paid_00-02': [processEntityLowResToFilledInEnglandAndWales, processEntityFilledInToObj, processEntityXYZToHeatMap, processEntityObjToZip],
+    'mean_price_paid_03-05': [processEntityLowResToFilledInEnglandAndWales, processEntityFilledInToObj, processEntityXYZToHeatMap, processEntityObjToZip],
+    'mean_price_paid_06-08': [processEntityLowResToFilledInEnglandAndWales, processEntityFilledInToObj, processEntityXYZToHeatMap, processEntityObjToZip],
+    'mean_price_paid_09-11': [processEntityLowResToFilledInEnglandAndWales, processEntityFilledInToObj, processEntityXYZToHeatMap, processEntityObjToZip],
+    'mean_price_paid_12-14': [processEntityLowResToFilledInEnglandAndWales, processEntityFilledInToObj, processEntityXYZToHeatMap, processEntityObjToZip],
+    'mean_price_paid_15-17': [processEntityLowResToFilledInEnglandAndWales, processEntityFilledInToObj, processEntityXYZToHeatMap, processEntityObjToZip],
+    'mean_price_paid_18-20': [processEntityLowResToFilledInEnglandAndWales, processEntityFilledInToObj, processEntityXYZToHeatMap, processEntityObjToZip]
+    # 'gbr_pd_2020_1km_UNadj_ASCII_XYZ': [processEntityFilledInToObj]
 }
-
-entityStepsToRun = {
-    # "coop": [processEntityFilledInToObj, processEntityObjToZip],
-    # "england": [processEntityFilledInToObj, processEntityObjToZip],
-    # "englandWales": [processEntityFilledInToObj, processEntityObjToZip],
-    "gbr_f_0_2020_constrained_UNadj": [processEntityFilledInToObj, processEntityObjToZip],
-    "gbr_f_10_2020_constrained_UNadj": [processEntityFilledInToObj, processEntityObjToZip],
-    "gbr_f_15_2020_constrained_UNadj": [processEntityFilledInToObj, processEntityObjToZip],
-    "gbr_f_1_2020_constrained_UNadj": [processEntityFilledInToObj, processEntityObjToZip],
-    "gbr_f_20_2020_constrained_UNadj": [processEntityFilledInToObj, processEntityObjToZip],
-    "gbr_f_25_2020_constrained_UNadj": [processEntityFilledInToObj, processEntityObjToZip],
-    "gbr_f_30_2020_constrained_UNadj": [processEntityFilledInToObj, processEntityObjToZip],
-    "gbr_f_35_2020_constrained_UNadj": [processEntityFilledInToObj, processEntityObjToZip],
-    "gbr_f_40_2020_constrained_UNadj": [processEntityFilledInToObj, processEntityObjToZip],
-    "gbr_f_45_2020_constrained_UNadj": [processEntityFilledInToObj, processEntityObjToZip],
-    "gbr_f_50_2020_constrained_UNadj": [processEntityFilledInToObj, processEntityObjToZip],
-    "gbr_f_55_2020_constrained_UNadj": [processEntityFilledInToObj, processEntityObjToZip],
-    "gbr_f_5_2020_constrained_UNadj": [processEntityFilledInToObj, processEntityObjToZip],
-    "gbr_f_60_2020_constrained_UNadj": [processEntityFilledInToObj, processEntityObjToZip],
-    "gbr_f_65_2020_constrained_UNadj": [processEntityFilledInToObj, processEntityObjToZip],
-    "gbr_f_70_2020_constrained_UNadj": [processEntityFilledInToObj, processEntityObjToZip],
-    "gbr_f_75_2020_constrained_UNadj": [processEntityFilledInToObj, processEntityObjToZip],
-    "gbr_f_80_2020_constrained_UNadj": [processEntityFilledInToObj, processEntityObjToZip],
-    "gbr_m_0_2020_constrained_UNadj": [processEntityFilledInToObj, processEntityObjToZip],
-    "gbr_m_10_2020_constrained_UNadj": [processEntityFilledInToObj, processEntityObjToZip],
-    "gbr_m_15_2020_constrained_UNadj": [processEntityFilledInToObj, processEntityObjToZip],
-    "gbr_m_1_2020_constrained_UNadj": [processEntityFilledInToObj, processEntityObjToZip],
-    "gbr_m_20_2020_constrained_UNadj": [processEntityFilledInToObj, processEntityObjToZip],
-    "gbr_m_25_2020_constrained_UNadj": [processEntityFilledInToObj, processEntityObjToZip],
-    "gbr_m_30_2020_constrained_UNadj": [processEntityFilledInToObj, processEntityObjToZip],
-    "gbr_m_35_2020_constrained_UNadj": [processEntityFilledInToObj, processEntityObjToZip],
-    "gbr_m_40_2020_constrained_UNadj": [processEntityFilledInToObj, processEntityObjToZip],
-    "gbr_m_45_2020_constrained_UNadj": [processEntityFilledInToObj, processEntityObjToZip],
-    "gbr_m_50_2020_constrained_UNadj": [processEntityFilledInToObj, processEntityObjToZip],
-    "gbr_m_55_2020_constrained_UNadj": [processEntityFilledInToObj, processEntityObjToZip],
-    "gbr_m_5_2020_constrained_UNadj": [processEntityFilledInToObj, processEntityObjToZip],
-    "gbr_m_60_2020_constrained_UNadj": [processEntityFilledInToObj, processEntityObjToZip],
-    "gbr_m_65_2020_constrained_UNadj": [processEntityFilledInToObj, processEntityObjToZip],
-    "gbr_m_70_2020_constrained_UNadj": [processEntityFilledInToObj, processEntityObjToZip],
-    "gbr_m_75_2020_constrained_UNadj": [processEntityFilledInToObj, processEntityObjToZip],
-    "gbr_m_80_2020_constrained_UNadj": [processEntityFilledInToObj, processEntityObjToZip],
-    "gbr_pd_2020_1km_UNadj_ASCII_XYZ": [processEntityFilledInToObj, processEntityObjToZip],
-    "iceland": [processEntityFilledInToObj, processEntityObjToZip],
-    "inverted_coop": [processEntityFilledInToObj, processEntityObjToZip],
-    "inverted_iceland": [processEntityFilledInToObj, processEntityObjToZip],
-    "inverted_mands": [processEntityFilledInToObj, processEntityObjToZip],
-    "inverted_mcdonalds": [processEntityFilledInToObj, processEntityObjToZip],
-    "inverted_morisons": [processEntityFilledInToObj, processEntityObjToZip],
-    "inverted_sainsburys": [processEntityFilledInToObj, processEntityObjToZip],
-    "inverted_tesco": [processEntityFilledInToObj, processEntityObjToZip],
-    "mands": [processEntityFilledInToObj, processEntityObjToZip],
-    "mcdonalds": [processEntityFilledInToObj, processEntityObjToZip],
-    "morisons": [processEntityFilledInToObj, processEntityObjToZip],
-    "pricePaid18-20": [processEntityFilledInToObj, processEntityObjToZip],
-    "price_paid_00-02": [processEntityFilledInToObj, processEntityObjToZip],
-    "price_paid_03-05": [processEntityFilledInToObj, processEntityObjToZip],
-    "price_paid_06-08": [processEntityFilledInToObj, processEntityObjToZip],
-    "price_paid_09-11": [processEntityFilledInToObj, processEntityObjToZip],
-    "price_paid_12-14": [processEntityFilledInToObj, processEntityObjToZip],
-    "price_paid_15-17": [processEntityFilledInToObj, processEntityObjToZip],
-    "price_paid_18-20": [processEntityFilledInToObj, processEntityObjToZip],
-    "price_paid_97-99": [processEntityFilledInToObj, processEntityObjToZip],
-    "med_price_paid_00-02": [processEntityFilledInToObj, processEntityObjToZip],
-    "med_price_paid_03-05": [processEntityFilledInToObj, processEntityObjToZip],
-    "med_price_paid_06-08": [processEntityFilledInToObj, processEntityObjToZip],
-    "med_price_paid_09-11": [processEntityFilledInToObj, processEntityObjToZip],
-    "med_price_paid_12-14": [processEntityFilledInToObj, processEntityObjToZip],
-    "med_price_paid_15-17": [processEntityFilledInToObj, processEntityObjToZip],
-    "med_price_paid_18-20": [processEntityFilledInToObj, processEntityObjToZip],
-    "med_price_paid_97-99": [processEntityFilledInToObj, processEntityObjToZip],
-
-    "price_paid_2020": [processEntityFilledInToObj, processEntityObjToZip],
-    "sainsburys": [processEntityFilledInToObj, processEntityObjToZip],
-    "tesco": [processEntityFilledInToObj, processEntityObjToZip],
-}
-
 
 pred_run_times = PredLoadTimes()
 for entity in entityStepsToRun.keys():

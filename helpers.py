@@ -21,10 +21,12 @@ def log(str, level=LogLevel.INFO):
     color = 'green' if level == LogLevel.INFO else ('yellow' if level == LogLevel.WARN else 'red')
     print(colored(str, color))
 
+
 def logInfo(val, *args):
     if args:
         val = (val,) + args
     log(val, LogLevel.INFO)
+
 
 if __name__ == '__main__':
     log('info auto')
@@ -48,6 +50,10 @@ class FileType(Enum):
     COMPRESSED = 10,
     MASKS = 11,
     POSTCODE = 12,
+    MSOA_COMMON_FORM = 13,
+    MSOA_GEO_DF = 14,
+    MSOA_MERGED = 15,
+    MSOA_SIMPLIFIED = 16
 
 
 FILE_EXTENSIONS = {
@@ -61,7 +67,11 @@ FILE_EXTENSIONS = {
     FileType.COMPRESSED: '.obj.gz',
     FileType.HEATMAP: '.png',
     FileType.MASKS: '.csv',
-    FileType.POSTCODE: '.csv'
+    FileType.POSTCODE: '.csv',
+    FileType.MSOA_COMMON_FORM: '.csv',
+    FileType.MSOA_GEO_DF: '.csv',
+    FileType.MSOA_MERGED: '.csv',
+    FileType.MSOA_SIMPLIFIED: '.csv'
 }
 BASE_FILEPATH = '/Users/james_hargreaves/PycharmProjects/dataplay_a2'
 
@@ -76,7 +86,11 @@ FILE_LOCATIONS = {
     FileType.COMPRESSED: 'data/compressed/',
     FileType.HEATMAP: 'data/heatmaps/',
     FileType.MASKS: 'data/masks/',
-    FileType.POSTCODE: 'data/postcode/'
+    FileType.POSTCODE: 'data/postcode/',
+    FileType.MSOA_COMMON_FORM: 'data/MSOAProcessing/CommonStartForm',
+    FileType.MSOA_GEO_DF: 'data/MSOAProcessing/GeoDF',
+    FileType.MSOA_MERGED: 'data/MSOAProcessing/MergedGeoDF',
+    FileType.MSOA_SIMPLIFIED: 'data/MSOAProcessing/SimplifiedGeoDF'
 }
 
 
@@ -104,13 +118,14 @@ def get_next_bounds(xs):
     for i, x in enumerate(xs):
         limit = xs[i + 1] if i < len(xs) - 1 else 2 * x - xs[i - 1]
         # to handle the case where we have a big gap between points
-        if limit - x > av_difference * 10:  # changed from 3 to 10 if things look weird lets undo this
+        if limit - x > av_difference * 5:
             limit = x + av_difference
         next_bound[x] = limit
     return next_bound
 
 
-def verts_for_cuboid(xys, z):
+# this also generalises to polygons
+def verts_for_polygon(xys, z):
     verts_bottom = [(x, y, 0) for x, y in xys]
     verts_top = [(x, y, z) for x, y in xys]
     # To complete the polygon it prints the vertices twice

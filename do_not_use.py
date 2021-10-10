@@ -7,7 +7,7 @@ import pandas as pd
 from shapely.geometry import Polygon
 from tqdm import tqdm
 
-from helpers import get_next_bounds, get_rect_verts, scale_z, verts_for_cuboid, scale_to_texture, \
+from helpers import get_next_bounds, get_rect_verts, scale_z, verts_for_polygon, scale_to_texture, \
     get_resolution_multiplier, get_buckets, FORCE_OVERWRITE, FileType, FILE_LOCATIONS
 
 HEIGHT_X = 200
